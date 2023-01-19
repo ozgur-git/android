@@ -77,7 +77,9 @@ android {
     // install this NDK version and Cmake to produce smaller APKs. Build will still work if not installed
     ndkVersion "${ndkEnv.get("NDK_VERSION")}"
 
-
+    dexOptions {
+        javaMaxHeapSize "2g"
+    }
     namespace 'com.owncloud.android'
     testNamespace "${namespace}.test"
 

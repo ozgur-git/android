@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<restrictions xmlns:android="http://schemas.android.com/apk/res/android">
+    <restriction
+        android:key="server_address"
+        android:restrictionType="string"
+        android:defaultValue="cloud.hoenisch-bau.de"/>
+    <restriction
+        android:key="user"
+        android:restrictionType="string"
+        android:defaultValue="mobil" />
+    <restriction
+        android:key="password"
+        android:restrictionType="string"
+        android:defaultValue="tr8azB5Ri7dSPL9" />
+</restrictions>
+
+

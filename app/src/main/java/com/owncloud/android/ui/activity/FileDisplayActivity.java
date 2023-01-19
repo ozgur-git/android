@@ -37,6 +37,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.RestrictionsManager;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -46,6 +47,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.os.Parcelable;
+import android.os.UserManager;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -174,6 +176,7 @@ public class FileDisplayActivity extends FileActivity
     private UploadFinishReceiver mUploadFinishReceiver;
     private DownloadFinishReceiver mDownloadFinishReceiver;
     private RemoteOperationResult mLastSslUntrustedServerResult;
+    RestrictionsManager restrictionsManager;
     @Inject LocalBroadcastManager localBroadcastManager;
 
     public static final String TAG_PUBLIC_LINK = "PUBLIC_LINK";
@@ -268,6 +271,9 @@ public class FileDisplayActivity extends FileActivity
         // Inflate and set the layout view
         binding = FilesBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        restrictionsManager = (RestrictionsManager) getActivity().getSystemService(Context.RESTRICTIONS_SERVICE);
+        registerRestrictionsManager();
 
         // setup toolbar
         setupHomeSearchToolbarWithSortAndListButtons();
@@ -1122,10 +1128,30 @@ public class FileDisplayActivity extends FileActivity
         Log_OC.v(TAG, "onSaveInstanceState() end");
     }
 
+    private void registerRestrictionsManager(){
+        IntentFilter restrictionsFilter =
+            new IntentFilter(Intent.ACTION_APPLICATION_RESTRICTIONS_CHANGED);
+
+        BroadcastReceiver restrictionsReceiver = new BroadcastReceiver() {
+            @Override public void onReceive(Context context, Intent intent) {
+
+                // Get the current configuration bundle
+                Bundle appRestrictions = restrictionsManager.getApplicationRestrictions();
+
+                // Check current configuration settings, change your app's UI and
+                // functionality as necessary.
+            }
+        };
+
+        registerReceiver(restrictionsReceiver, restrictionsFilter);
+    }
+
     @Override
     protected void onResume() {
         Log_OC.v(TAG, "onResume() start");
         super.onResume();
+
+        //UserManager.getApplicationRestrictions();
         // Instead of onPostCreate, starting the loading in onResume for children fragments
         Fragment leftFragment = getLeftFragment();
 
@@ -2570,4 +2596,8 @@ public class FileDisplayActivity extends FileActivity
             DisplayUtils.showSnackMessage(listOfFiles.getView(), message);
         }
     }
+
+
+
+
 }

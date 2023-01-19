@@ -20,6 +20,15 @@ buildscript {
 
         ciBuild = System.getenv("CI") == "true"
     }
+    repositories {
+        google()
+        mavenCentral()
+        maven { url "https://jitpack.io" }
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.3.1'
+    }
+
 }
 
 subprojects {

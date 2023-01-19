@@ -38,15 +38,19 @@
  *
  */
 
+
 package com.owncloud.android.authentication;
 
 import android.Manifest;
 import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.RestrictionsManager;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
@@ -206,6 +210,7 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
     private ServiceConnection mOperationsServiceConnection;
     private OperationsServiceBinder mOperationsServiceBinder;
     private AccountManager mAccountMgr;
+    RestrictionsManager restrictionsManager;
 
     /// Server PRE-Fragment elements
     private AccountSetupBinding accountSetupBinding;
@@ -261,6 +266,9 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        restrictionsManager = (RestrictionsManager) this.getSystemService(Context.RESTRICTIONS_SERVICE);
+        registerRestrictionsManager();
+
         Uri data = getIntent().getData();
         boolean directLogin = data != null && data.toString().startsWith(getString(R.string.login_data_own_scheme));
         if (savedInstanceState == null && !directLogin) {
@@ -268,7 +276,6 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
         }
 
         onlyAdd = getIntent().getBooleanExtra(KEY_ONLY_ADD, false) || checkIfViaSSO(getIntent());
-
         // delete cookies for webView
         deleteCookies();
 
@@ -329,6 +336,7 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
             initAuthorizationPreFragment(savedInstanceState);
         }
 
+        restrictionsManager = (RestrictionsManager) this.getSystemService(Context.RESTRICTIONS_SERVICE);
         initServerPreFragment(savedInstanceState);
     }
 
@@ -708,6 +716,9 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
     @Override
     protected void onResume() {
         super.onResume();
+        Bundle restrictions = restrictionsManager.getApplicationRestrictions();
+        String res = restrictions.getString("server_address");
+        accountSetupBinding.hostUrlInput.setText(res);
 
         // bind to Operations Service
         mOperationsServiceConnection = new OperationsServiceConnection();
@@ -1442,6 +1453,24 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
                 dialog.dismissAllowingStateLoss();
             }
         }
+    }
+
+    private void registerRestrictionsManager(){
+        IntentFilter restrictionsFilter =
+            new IntentFilter(Intent.ACTION_APPLICATION_RESTRICTIONS_CHANGED);
+
+        BroadcastReceiver restrictionsReceiver = new BroadcastReceiver() {
+            @Override public void onReceive(Context context, Intent intent) {
+
+                // Get the current configuration bundle
+                Bundle appRestrictions = restrictionsManager.getApplicationRestrictions();
+
+                // Check current configuration settings, change your app's UI and
+                // functionality as necessary.
+            }
+        };
+
+        registerReceiver(restrictionsReceiver, restrictionsFilter);
     }
 
     /**
