@@ -65,11 +65,13 @@ import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.util.AndroidRuntimeException;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.webkit.CookieManager;
 import android.webkit.CookieSyncManager;
+import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
@@ -131,6 +133,7 @@ import com.owncloud.android.utils.theme.ViewThemeUtils;
 
 import java.io.InputStream;
 import java.net.URLDecoder;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -238,6 +241,8 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
     private boolean showWebViewLoginUrl;
     private String webViewUser;
     private String webViewPassword;
+    private String inputUserName = EMPTY_STRING;
+    private String inputPassword = EMPTY_STRING;
 
     @Inject UserAccountManager accountManager;
     @Inject AppPreferences preferences;
@@ -387,18 +392,18 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
         Map<String, String> headers = new HashMap<>();
         headers.put(RemoteOperation.OCS_API_HEADER, RemoteOperation.OCS_API_HEADER_VALUE);
 
-        String url;
+        String url="";
         if (baseURL != null && !baseURL.isEmpty()) {
             url = baseURL;
         } else {
             url = getResources().getString(R.string.webview_login_url);
         }
-
         if (url.startsWith(HTTPS_PROTOCOL)) {
             strictMode = true;
         }
 
         accountSetupWebviewBinding.loginWebview.loadUrl(url, headers);
+
 
         setClient();
     }
@@ -460,6 +465,17 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
                     viewThemeUtils.platform.resetStatusBar(AuthenticatorActivity.this);
                     getWindow().setNavigationBarColor(ContextCompat.getColor(AuthenticatorActivity.this, R.color.bg_default));
                 }
+                String js = "javascript:(function(){" +
+                    "document.getElementById('user').select();" +
+                    "document.getElementById('user').value = '"+inputUserName+"';" +
+                    "document.getElementById('user').blur();" +
+                    "document.getElementById('password').select();" +
+                    "document.getElementById('password').value = '"+inputPassword+"';" +
+                    "document.getElementById('password').blur();" +
+                    "document.getElementById('submit-form').click();" +
+                    "})()";
+
+                view.evaluateJavascript(js, s -> Log.d(TAG, s));
             }
 
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
@@ -487,6 +503,12 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
             mServerInfo.mBaseUrl = AuthenticatorUrlUtils.normalizeUrlSuffix(loginUrlInfo.serverAddress);
             webViewUser = loginUrlInfo.username;
             webViewPassword = loginUrlInfo.password;
+            /*
+            mServerInfo.mBaseUrl = AuthenticatorUrlUtils.normalizeUrlSuffix(loginUrlInfo.serverAddress);
+            webViewUser = loginUrlInfo.username;
+            webViewPassword = loginUrlInfo.password;
+
+             */
         } catch (Exception e) {
             mServerStatusIcon = R.drawable.ic_alert;
             mServerStatusText = getString(R.string.qr_could_not_be_read);
@@ -717,8 +739,12 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
     protected void onResume() {
         super.onResume();
         Bundle restrictions = restrictionsManager.getApplicationRestrictions();
-        String res = restrictions.getString("server_address");
-        accountSetupBinding.hostUrlInput.setText(res);
+        String serverAddress = restrictions.getString("server_address");
+        String inputName = restrictions.getString("user");
+        String inputPassword = restrictions.getString("password");
+        accountSetupBinding.hostUrlInput.setText(serverAddress);
+        this.inputUserName = inputName;
+        this.inputPassword = inputPassword;
 
         // bind to Operations Service
         mOperationsServiceConnection = new OperationsServiceConnection();
@@ -929,6 +955,8 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
                     }
                 }).start();
 
+                Account[] accounts = accountManager.getAccounts();
+                Log.d(TAG, "accounts are "+Arrays.toString(accounts));
                 accountSetupWebviewBinding = AccountSetupWebviewBinding.inflate(getLayoutInflater());
                 setContentView(accountSetupWebviewBinding.getRoot());
                 initWebViewLogin(mServerInfo.mBaseUrl + WEB_LOGIN, false);
@@ -1329,8 +1357,96 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
             //      addAccountExplicitly, or in KEY_USERDATA
             mAccountMgr.setUserData(mAccount, Constants.KEY_OC_VERSION, mServerInfo.mVersion.getVersion());
             mAccountMgr.setUserData(mAccount, Constants.KEY_OC_BASE_URL, mServerInfo.mBaseUrl);
-            mAccountMgr.setUserData(mAccount, Constants.KEY_DISPLAY_NAME, userInfo.getDisplayName());
-            mAccountMgr.setUserData(mAccount, Constants.KEY_USER_ID, userInfo.getId());
+            //mAccountMgr.setUserData(mAccount, Constants.KEY_DISPLAY_NAME, userInfo.getDisplayName());
+            //mAccountMgr.setUserData(mAccount, Constants.KEY_USER_ID, userInfo.getId());
+
+            mAccountMgr.setUserData(mAccount, Constants.KEY_DISPLAY_NAME, "mobil");
+            mAccountMgr.setUserData(mAccount, Constants.KEY_USER_ID, "mobil");
+
+            mAccountMgr.setUserData(mAccount,
+                                    Constants.KEY_OC_ACCOUNT_VERSION,
+                                    Integer.toString(UserAccountManager.ACCOUNT_VERSION_WITH_PROPER_ID));
+
+
+            setAccountAuthenticatorResult(intent.getExtras());
+            setResult(RESULT_OK, intent);
+
+            // notify Document Provider
+            DocumentsStorageProvider.notifyRootsChanged(this);
+
+            return true;
+        }
+    }
+
+    @SuppressFBWarnings("DMI")
+    @SuppressLint("TrulyRandom")
+    protected boolean createAccount(String user, String password) {
+        String accountType = MainApp.getAccountType(this);
+    /*
+        // create and save new ownCloud account
+        String lastPermanentLocation = authResult.getLastPermanentLocation();
+        if (lastPermanentLocation != null) {
+            mServerInfo.mBaseUrl = AuthenticatorUrlUtils.trimWebdavSuffix(lastPermanentLocation);
+        }
+    */
+        Uri uri = Uri.parse(mServerInfo.mBaseUrl);
+        // used for authenticate on every login/network connection, determined by first login (weblogin/old login)
+        // can be anything: email, name, name with whitespaces
+        String loginName = user;
+
+        String accountName = com.owncloud.android.lib.common.accounts.AccountUtils.buildAccountName(uri, loginName);
+        Account newAccount = new Account(accountName, accountType);
+        if (accountManager.exists(newAccount)) {
+            // fail - not a new account, but an existing one; disallow
+            RemoteOperationResult result = new RemoteOperationResult(ResultCode.ACCOUNT_NOT_NEW);
+
+            updateAuthStatusIconAndText(result);
+            showAuthStatus();
+
+            Log_OC.d(TAG, result.getLogMessage());
+            return false;
+
+        }
+
+        else {
+            /*
+            UserInfo userInfo = authResult.getResultData();
+            if (userInfo == null) {
+                Log_OC.e(this, "Could not read user data!");
+                return false;
+            }
+            */
+
+            mAccount = newAccount;
+//            mAccountMgr.addAccountExplicitly(mAccount, webViewPassword, null);
+            mAccountMgr.addAccountExplicitly(mAccount, password, null);
+            mAccountMgr.notifyAccountAuthenticated(mAccount);
+
+            // add the new account as default in preferences, if there is none already
+            User defaultAccount = accountManager.getUser();
+            if (defaultAccount.isAnonymous()) {
+                SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(this).edit();
+                editor.putString("select_oc_account", accountName);
+                editor.apply();
+            }
+
+            /// prepare result to return to the Authenticator
+            //  TODO check again what the Authenticator makes with it; probably has the same
+            //  effect as addAccountExplicitly, but it's not well done
+            final Intent intent = new Intent();
+            intent.putExtra(AccountManager.KEY_ACCOUNT_TYPE, accountType);
+            intent.putExtra(AccountManager.KEY_ACCOUNT_NAME, mAccount.name);
+            intent.putExtra(AccountManager.KEY_USERDATA, loginName);
+
+            /// add user data to the new account; TODO probably can be done in the last parameter
+            //      addAccountExplicitly, or in KEY_USERDATA
+            mAccountMgr.setUserData(mAccount, Constants.KEY_OC_VERSION, mServerInfo.mVersion.getVersion());
+            mAccountMgr.setUserData(mAccount, Constants.KEY_OC_BASE_URL, mServerInfo.mBaseUrl);
+//            mAccountMgr.setUserData(mAccount, Constants.KEY_DISPLAY_NAME, userInfo.getDisplayName());
+//            mAccountMgr.setUserData(mAccount, Constants.KEY_USER_ID, userInfo.getId());
+            mAccountMgr.setUserData(mAccount, Constants.KEY_DISPLAY_NAME, user);
+            mAccountMgr.setUserData(mAccount, Constants.KEY_USER_ID, user);
+
             mAccountMgr.setUserData(mAccount,
                                     Constants.KEY_OC_ACCOUNT_VERSION,
                                     Integer.toString(UserAccountManager.ACCOUNT_VERSION_WITH_PROPER_ID));
@@ -1461,9 +1577,14 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
 
         BroadcastReceiver restrictionsReceiver = new BroadcastReceiver() {
             @Override public void onReceive(Context context, Intent intent) {
-
                 // Get the current configuration bundle
                 Bundle appRestrictions = restrictionsManager.getApplicationRestrictions();
+                String user = appRestrictions.getString("user");
+                String password = appRestrictions.getString("password");
+
+                if (user != null && password !=null){
+                    createAccount(user, password);
+                }
 
                 // Check current configuration settings, change your app's UI and
                 // functionality as necessary.
