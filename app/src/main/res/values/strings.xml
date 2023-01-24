@@ -17,9 +17,6 @@
     <string name="menu_item_sort_by_date_oldest_first">Oldest first</string>
     <string name="menu_item_sort_by_size_biggest_first">Biggest first</string>
     <string name="menu_item_sort_by_size_smallest_first">Smallest first</string>
-    <string name="restriction_title">ozgur</string>
-    <string name="restriction_description">ozgur</string>
-
 
     <string name="drawer_item_all_files">All files</string>
     <string name="drawer_item_home">Home</string>
