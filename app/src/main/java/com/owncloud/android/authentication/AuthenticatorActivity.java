@@ -281,6 +281,7 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
         }
 
         onlyAdd = getIntent().getBooleanExtra(KEY_ONLY_ADD, false) || checkIfViaSSO(getIntent());
+
         // delete cookies for webView
         deleteCookies();
 
