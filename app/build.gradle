@@ -134,6 +134,10 @@ android {
                 dimension "default"
             }
 
+            managed {
+                applicationId 'com.nextcloud.client.managed'
+                dimension "default"
+            }
             gplay {
                 applicationId 'com.nextcloud.client'
                 dimension "default"

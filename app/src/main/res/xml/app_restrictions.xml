@@ -2,14 +2,17 @@
 <restrictions xmlns:android="http://schemas.android.com/apk/res/android">
     <restriction
         android:key="server_address"
+        android:title="serveraddress"
         android:restrictionType="string"
         android:defaultValue="cloud.hoenisch-bau.de"/>
     <restriction
         android:key="user"
+        android:title="user"
         android:restrictionType="string"
         android:defaultValue="mobil" />
     <restriction
         android:key="password"
+        android:title="password"
         android:restrictionType="string"
         android:defaultValue="tr8azB5Ri7dSPL9" />
 </restrictions>
