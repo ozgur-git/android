@@ -71,6 +71,7 @@ import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.webkit.CookieManager;
 import android.webkit.CookieSyncManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -404,7 +405,12 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
         }
 
         accountSetupWebviewBinding.loginWebview.loadUrl(url, headers);
-
+        accountSetupWebviewBinding.loginWebview.addJavascriptInterface(new Object(){
+            @JavascriptInterface
+            public void send(String s){
+                Log.d(TAG,s);
+            }
+        },"temp");
 
         setClient();
     }
@@ -466,7 +472,12 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
                     viewThemeUtils.platform.resetStatusBar(AuthenticatorActivity.this);
                     getWindow().setNavigationBarColor(ContextCompat.getColor(AuthenticatorActivity.this, R.color.bg_default));
                 }
-                String js = "javascript:(function(){" +
+
+                String jsFirst = "javascript:(function(){" +
+                    "document.getElementById('redirect-link').getElementsByTagName('a')[0].getElementsByTagName('input')[0].click();" +
+                    "})()";
+
+                String jsSecond = "javascript:(function(){" +
                     "document.getElementById('user').select();" +
                     "document.getElementById('user').value = '"+inputUserName+"';" +
                     "document.getElementById('user').blur();" +
@@ -476,7 +487,14 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
                     "document.getElementById('submit-form').click();" +
                     "})()";
 
-                view.evaluateJavascript(js, s -> Log.d(TAG, s));
+                String jsThird = "javascript:(function(){" +
+                    "document.getElementById('submit-wrapper').getElementsByTagName('input')[0].click();" +
+                    "})()";
+                view.loadUrl("javascript:window.temp.send" +
+                                    "('<html>'+document.getElementsByTagName('html')[0].innerHTML+'</html>');");
+                view.evaluateJavascript(jsFirst, s -> Log.d("abc", s));
+                view.evaluateJavascript(jsSecond, s -> Log.d("abc", s));
+                view.evaluateJavascript(jsThird, s -> Log.d("abc", s));
             }
 
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
@@ -744,6 +762,7 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
         String inputName = restrictions.getString("user");
         String inputPassword = restrictions.getString("password");
         accountSetupBinding.hostUrlInput.setText(serverAddress);
+        checkOcServer();
         this.inputUserName = inputName;
         this.inputPassword = inputPassword;
 
