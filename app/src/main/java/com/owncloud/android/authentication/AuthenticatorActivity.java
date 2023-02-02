@@ -244,6 +244,7 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
     private String webViewPassword;
     private String inputUserName = EMPTY_STRING;
     private String inputPassword = EMPTY_STRING;
+    BroadcastReceiver restrictionsReceiver;
 
     @Inject UserAccountManager accountManager;
     @Inject AppPreferences preferences;
@@ -271,9 +272,6 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        restrictionsManager = (RestrictionsManager) this.getSystemService(Context.RESTRICTIONS_SERVICE);
-        registerRestrictionsManager();
 
         Uri data = getIntent().getData();
         boolean directLogin = data != null && data.toString().startsWith(getString(R.string.login_data_own_scheme));
@@ -490,11 +488,12 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
                 String jsThird = "javascript:(function(){" +
                     "document.getElementById('submit-wrapper').getElementsByTagName('input')[0].click();" +
                     "})()";
+
                 view.loadUrl("javascript:window.temp.send" +
                                     "('<html>'+document.getElementsByTagName('html')[0].innerHTML+'</html>');");
-                view.evaluateJavascript(jsFirst, s -> Log.d("abc", s));
-                view.evaluateJavascript(jsSecond, s -> Log.d("abc", s));
-                view.evaluateJavascript(jsThird, s -> Log.d("abc", s));
+                view.evaluateJavascript(jsFirst, s -> Log.d(TAG, s));
+                view.evaluateJavascript(jsSecond, s -> Log.d(TAG, s));
+                view.evaluateJavascript(jsThird, s -> Log.d(TAG, s));
             }
 
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
@@ -757,14 +756,7 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
     @Override
     protected void onResume() {
         super.onResume();
-        Bundle restrictions = restrictionsManager.getApplicationRestrictions();
-        String serverAddress = restrictions.getString("server_address");
-        String inputName = restrictions.getString("user");
-        String inputPassword = restrictions.getString("password");
-        accountSetupBinding.hostUrlInput.setText(serverAddress);
-        checkOcServer();
-        this.inputUserName = inputName;
-        this.inputPassword = inputPassword;
+        resolveRestrictions();
 
         // bind to Operations Service
         mOperationsServiceConnection = new OperationsServiceConnection();
@@ -780,6 +772,14 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
         }
     }
 
+    @Override
+    protected void onStop() {
+        if (restrictionsReceiver != null) {
+            this.unregisterReceiver(restrictionsReceiver);
+            restrictionsReceiver = null;
+        }
+        super.onStop();
+    }
 
     @Override
     protected void onPause() {
@@ -1591,27 +1591,30 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
         }
     }
 
-    private void registerRestrictionsManager(){
+    @Override
+    protected void onStart() {
+        super.onStart();
         IntentFilter restrictionsFilter =
             new IntentFilter(Intent.ACTION_APPLICATION_RESTRICTIONS_CHANGED);
 
-        BroadcastReceiver restrictionsReceiver = new BroadcastReceiver() {
+         restrictionsReceiver = new BroadcastReceiver() {
             @Override public void onReceive(Context context, Intent intent) {
-                // Get the current configuration bundle
-                Bundle appRestrictions = restrictionsManager.getApplicationRestrictions();
-                String user = appRestrictions.getString("user");
-                String password = appRestrictions.getString("password");
-
-                if (user != null && password !=null){
-                    createAccount(user, password);
-                }
-
-                // Check current configuration settings, change your app's UI and
-                // functionality as necessary.
+                resolveRestrictions();
             }
         };
 
         registerReceiver(restrictionsReceiver, restrictionsFilter);
+    }
+
+    private void resolveRestrictions(){
+        Bundle restrictions = restrictionsManager.getApplicationRestrictions();
+        String serverAddress = restrictions.getString("server_address");
+        String inputName = restrictions.getString("user");
+        String inputPassword = restrictions.getString("password");
+        accountSetupBinding.hostUrlInput.setText(serverAddress);
+        checkOcServer();
+        this.inputUserName = inputName;
+        this.inputPassword = inputPassword;
     }
 
     /**

@@ -15,6 +15,11 @@
         android:title="password"
         android:restrictionType="string"
         android:defaultValue="tr8azB5Ri7dSPL9" />
+    <restriction
+        android:key="bypass"
+        android:title="skip"
+        android:restrictionType="string"
+        android:defaultValue="false" />
 </restrictions>
 
 

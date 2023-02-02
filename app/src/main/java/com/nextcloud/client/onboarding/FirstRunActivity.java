@@ -26,7 +26,11 @@ package com.nextcloud.client.onboarding;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.RestrictionsManager;
 import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Bundle;
@@ -60,6 +64,8 @@ public class FirstRunActivity extends BaseActivity implements ViewPager.OnPageCh
     public static final String EXTRA_ALLOW_CLOSE = "ALLOW_CLOSE";
     public static final String EXTRA_EXIT = "EXIT";
     public static final int FIRST_RUN_RESULT_CODE = 199;
+    BroadcastReceiver restrictionsReceiver;
+    RestrictionsManager restrictionsManager;
 
     @Inject UserAccountManager userAccountManager;
     @Inject AppPreferences preferences;
@@ -80,6 +86,7 @@ public class FirstRunActivity extends BaseActivity implements ViewPager.OnPageCh
 
         setSlideshowSize(getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE);
 
+        restrictionsManager = (RestrictionsManager) this.getSystemService(Context.RESTRICTIONS_SERVICE);
 
         binding.login.setBackgroundColor(getResources().getColor(R.color.login_btn_tint));
         binding.login.setTextColor(getResources().getColor(R.color.primary));
@@ -157,6 +164,27 @@ public class FirstRunActivity extends BaseActivity implements ViewPager.OnPageCh
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        IntentFilter restrictionsFilter =
+            new IntentFilter(Intent.ACTION_APPLICATION_RESTRICTIONS_CHANGED);
+
+        restrictionsReceiver = new BroadcastReceiver() {
+            @Override public void onReceive(Context context, Intent intent) {
+                resolveRestrictions();
+            }
+        };
+
+        registerReceiver(restrictionsReceiver, restrictionsFilter);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        resolveRestrictions();
+    }
+
+    @Override
     public void onBackPressed() {
         onFinish();
 
@@ -177,8 +205,11 @@ public class FirstRunActivity extends BaseActivity implements ViewPager.OnPageCh
 
     @Override
     protected void onStop() {
+        if (restrictionsReceiver != null) {
+            this.unregisterReceiver(restrictionsReceiver);
+            restrictionsReceiver = null;
+        }
         onFinish();
-
         super.onStop();
     }
 
@@ -227,6 +258,13 @@ public class FirstRunActivity extends BaseActivity implements ViewPager.OnPageCh
         }
     }
 
+    private void resolveRestrictions(){
+        Bundle restrictions = restrictionsManager.getApplicationRestrictions();
+        boolean isBypassed = restrictions.getBoolean("bypass");
+        if (isBypassed){
+            binding.login.performClick();
+        }
+    }
 
     public static FeatureItem[] getFirstRun() {
         return new FeatureItem[]{
