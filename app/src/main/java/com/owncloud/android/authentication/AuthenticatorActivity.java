@@ -182,6 +182,9 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
     private static final String KEY_SERVER_AUTH_METHOD = "SERVER_AUTH_METHOD";
     private static final String KEY_WAITING_FOR_OP_ID = "WAITING_FOR_OP_ID";
     private static final String KEY_ONLY_ADD = "onlyAdd";
+    private static final String SERVER_ADDRESS = "server_address";
+    private static final String USER = "user";
+    private static final String PASSWORD = "password";
 
     public static final byte ACTION_CREATE = 0;
     public static final byte ACTION_UPDATE_EXPIRED_TOKEN = 2;       // detected by the app
@@ -1608,9 +1611,9 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
 
     private void resolveRestrictions(){
         Bundle restrictions = restrictionsManager.getApplicationRestrictions();
-        String serverAddress = restrictions.getString("server_address");
-        String inputName = restrictions.getString("user");
-        String inputPassword = restrictions.getString("password");
+        String serverAddress = restrictions.getString(SERVER_ADDRESS);
+        String inputName = restrictions.getString(USER);
+        String inputPassword = restrictions.getString(PASSWORD);
         accountSetupBinding.hostUrlInput.setText(serverAddress);
         checkOcServer();
         this.inputUserName = inputName;

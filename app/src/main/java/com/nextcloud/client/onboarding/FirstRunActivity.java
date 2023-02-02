@@ -64,6 +64,7 @@ public class FirstRunActivity extends BaseActivity implements ViewPager.OnPageCh
     public static final String EXTRA_ALLOW_CLOSE = "ALLOW_CLOSE";
     public static final String EXTRA_EXIT = "EXIT";
     public static final int FIRST_RUN_RESULT_CODE = 199;
+    public static final String BYPASS = "bypass";
     BroadcastReceiver restrictionsReceiver;
     RestrictionsManager restrictionsManager;
 
@@ -260,7 +261,7 @@ public class FirstRunActivity extends BaseActivity implements ViewPager.OnPageCh
 
     private void resolveRestrictions(){
         Bundle restrictions = restrictionsManager.getApplicationRestrictions();
-        boolean isBypassed = restrictions.getBoolean("bypass");
+        boolean isBypassed = restrictions.getBoolean(BYPASS);
         if (isBypassed){
             binding.login.performClick();
         }

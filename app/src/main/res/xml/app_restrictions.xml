@@ -13,8 +13,7 @@
     <restriction
         android:key="password"
         android:title="password"
-        android:restrictionType="string"
-        android:defaultValue="tr8azB5Ri7dSPL9" />
+        android:restrictionType="string"/>
     <restriction
         android:key="bypass"
         android:title="skip"
