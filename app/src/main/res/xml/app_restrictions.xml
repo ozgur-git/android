@@ -17,7 +17,7 @@
     <restriction
         android:key="bypass"
         android:title="skip"
-        android:restrictionType="string"
+        android:restrictionType="boolean"
         android:defaultValue="false" />
 </restrictions>
 
