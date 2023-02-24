@@ -82,6 +82,7 @@ import android.widget.Toast;
 import com.blikoon.qrcodescanner.QrCodeActivity;
 import com.google.android.material.snackbar.Snackbar;
 import com.nextcloud.android.common.ui.color.ColorUtil;
+import com.nextcloud.android.common.ui.theme.utils.ColorRole;
 import com.nextcloud.client.account.User;
 import com.nextcloud.client.account.UserAccountManager;
 import com.nextcloud.client.device.DeviceInfo;
@@ -249,13 +250,15 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
     @Inject OnboardingService onboarding;
     @Inject DeviceInfo deviceInfo;
     @Inject PassCodeManager passCodeManager;
-    @Inject ViewThemeUtils viewThemeUtils;
+    @Inject ViewThemeUtils.Factory viewThemeUtilsFactory;
     @Inject ColorUtil colorUtil;
 
     private boolean onlyAdd = false;
     @SuppressLint("ResourceAsColor") @ColorInt
     private int primaryColor = R.color.primary;
     private boolean strictMode = false;
+
+    private ViewThemeUtils viewThemeUtils;
 
     @VisibleForTesting
     public AccountSetupBinding getAccountSetupBinding() {
@@ -270,6 +273,9 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        viewThemeUtils = viewThemeUtilsFactory.withPrimaryAsBackground();
+        viewThemeUtils.platform.themeStatusBar(this, ColorRole.PRIMARY);
+
 
         restrictionsManager = (RestrictionsManager) this.getSystemService(Context.RESTRICTIONS_SERVICE);
         registerRestrictionsManager();
@@ -362,6 +368,7 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
     @SuppressFBWarnings("ANDROID_WEB_VIEW_JAVASCRIPT")
     @SuppressLint("SetJavaScriptEnabled")
     private void initWebViewLogin(String baseURL, boolean useGenericUserAgent) {
+        viewThemeUtils.platform.colorCircularProgressBar(accountSetupWebviewBinding.loginWebviewProgressBar, ColorRole.ON_PRIMARY_CONTAINER);
         accountSetupWebviewBinding.loginWebview.setVisibility(View.GONE);
 
         accountSetupWebviewBinding.loginWebview.getSettings().setAllowFileAccess(false);
@@ -568,10 +575,15 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
         accountSetupBinding.hostUrlInputHelperText.setText(
             String.format(getString(R.string.login_url_helper_text), getString(R.string.app_name)));
 
+        viewThemeUtils.platform.colorTextView(accountSetupBinding.hostUrlInputHelperText, ColorRole.ON_PRIMARY);
+        viewThemeUtils.platform.colorTextView(accountSetupBinding.serverStatusText, ColorRole.ON_PRIMARY);
+        viewThemeUtils.platform.colorTextView(accountSetupBinding.authStatusText, ColorRole.ON_PRIMARY);
+        viewThemeUtils.material.colorTextInputLayout(accountSetupBinding.hostUrlContainer, ColorRole.ON_PRIMARY);
+        viewThemeUtils.platform.colorEditTextOnPrimary(accountSetupBinding.hostUrlInput);
+
         if (deviceInfo.hasCamera(this)) {
             accountSetupBinding.scanQr.setOnClickListener(v -> onScan());
-            viewThemeUtils.platform.colorDrawable(accountSetupBinding.scanQr.getDrawable(),
-                                                  getResources().getColor(R.color.login_text_color));
+            viewThemeUtils.platform.tintDrawable(this, accountSetupBinding.scanQr.getDrawable(), ColorRole.ON_PRIMARY);
         } else {
             accountSetupBinding.scanQr.setVisibility(View.GONE);
         }
